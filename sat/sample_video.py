@@ -5,7 +5,9 @@ from typing import List, Union
 from tqdm import tqdm
 from omegaconf import ListConfig
 import imageio
-
+from PIL import Image
+import torch
+import torchvision.transforms as transforms
 import torch
 import numpy as np
 from einops import rearrange
@@ -171,11 +173,39 @@ def sampling_main(args, model_cls):
             for index in range(args.batch_size):
                 # reload model on GPU
                 model.to(device)
+                image = Image.open("/home/dmeck/Downloads/20240810_184941.png")
+
+                # 预处理：调整大小、转换为张量、归一化
+                preprocess = transforms.Compose([
+                    transforms.Resize((60, 90)),  # 调整图片大小为 60x90
+                    transforms.ToTensor(),  # 将图片转换为 PyTorch 张量，形状为 (channels, height, width)
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406, 0.0], std=[0.229, 0.224, 0.225, 1.0])  # 归一化，考虑4个通道
+                ])
+
+                image_tensor = preprocess(image)  # 形状为 (4, 60, 90)
+
+                # 将图片复制以匹配通道数 (16)
+                image_tensor = image_tensor.repeat(16 // image_tensor.size(0), 1, 1)  # 形状变为 (16, 60, 90)
+
+                # 添加 batch_size 和 num_frames 维度
+                image_embeds = image_tensor.unsqueeze(0).repeat(1, 13, 1, 1, 1)  # 形状变为 (batch_size, 13, 16, 60, 90)
+
+                # 转换 dtype 为 torch.float32
+                image_embeds = image_embeds.to(dtype=torch.float32)
+                image_embeds = image_embeds.to(device)
+
+                # 确保 image_embeds 形状和 dtype 正确
+                assert image_embeds.shape == (1, 13, 16, 60, 90), f"Shape mismatch: expected (1, 13, 16, 60, 90), but got {image_embeds.shape}"
+                assert image_embeds.dtype == torch.float32, f"Dtype mismatch: expected torch.float32, but got {image_embeds.dtype}"
+
+                # 假设 `shape` 是 (13, 16, 60, 90)，并将 image_embeds 作为 prefix 传入
                 samples_z = sample_func(
                     c,
                     uc=uc,
                     batch_size=1,
                     shape=(T, C, H // F, W // F),
+
+                    prefix = image_embeds
                 )
                 samples_z = samples_z.permute(0, 2, 1, 3, 4).contiguous()
 

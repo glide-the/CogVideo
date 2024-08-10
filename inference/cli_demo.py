@@ -13,7 +13,9 @@ Run the script:
 import argparse
 import tempfile
 from typing import Union, List
-
+from PIL import Image
+import torch
+import torchvision.transforms as transforms
 import PIL
 import imageio
 import numpy as np
@@ -40,8 +42,9 @@ def export_to_video_imageio(
 def generate_video(
     prompt: str,
     model_path: str,
+    image_path: str = None,
     output_path: str = "./output.mp4",
-    num_inference_steps: int = 50,
+    num_inference_steps: int = 30,
     guidance_scale: float = 6.0,
     num_videos_per_prompt: int = 1,
     device: str = "cuda",
@@ -77,12 +80,43 @@ def generate_video(
         device=device,  # Device to use for computation
         dtype=dtype,  # Data type for computation
     )
+    image_embeds = None
+    if image_path:
+        # 加载图片
+        image = Image.open(image_path)
+
+        # 预处理：调整大小、转换为张量、归一化
+        preprocess = transforms.Compose([
+            transforms.Resize((60, 90)),  # 调整图片大小为 60x90
+            transforms.ToTensor(),  # 将图片转换为 PyTorch 张量，形状为 (channels, height, width)
+            transforms.Normalize(mean=[0.485, 0.456, 0.406, 0.0], std=[0.229, 0.224, 0.225, 1.0])  # 归一化，考虑4个通道
+        ])
+
+        image_tensor = preprocess(image)  # 形状为 (4, 60, 90)
+
+        # 将图片转换为 float16
+        image_tensor = image_tensor.to(torch.float16)
+
+        # 将图片复制以匹配帧数 (13) 和通道数 (16)
+        image_tensor = image_tensor.repeat(16 // image_tensor.size(0), 1, 1).unsqueeze(0).unsqueeze(0)  # 形状变为 (1, 1, 16, 60, 90)
+
+        # 添加 batch_size 和 num_frames 维度
+        image_embeds = image_tensor.repeat(1, 13, 1, 1, 1)  # 形状变为 (1, 13, 16, 60, 90)
+
+        # 确保 image_embeds 形状正确
+        assert image_embeds.shape == (1, 13, 16, 60, 90)
+        assert image_embeds.dtype == torch.float16
+
+        # 现在 image_embeds 可以传入你的模型了
+        print(image_embeds.shape)
+        print(image_embeds.dtype)  # 检查 dtype 是否为 torch.float16
 
     # Generate the video frames using the pipeline
     video = pipe(
         num_inference_steps=num_inference_steps,  # Number of inference steps
         guidance_scale=guidance_scale,  # Guidance scale for classifier-free guidance
         prompt_embeds=prompt_embeds,  # Encoded prompt embeddings
+        latents=image_embeds,
         negative_prompt_embeds=torch.zeros_like(prompt_embeds),  # Not Supported negative prompt
     ).frames[0]
 
@@ -93,16 +127,17 @@ def generate_video(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a video from a text prompt using CogVideoX")
     parser.add_argument("--prompt", type=str, required=True, help="The description of the video to be generated")
+    parser.add_argument("--image_path", type=str,default=None, help="The description of the image2video to be generated")
     parser.add_argument(
-        "--model_path", type=str, default="THUDM/CogVideoX-2b", help="The path of the pre-trained model to be used"
+        "--model_path", type=str, default="/media/checkpoint/CogVideoX-2b", help="The path of the pre-trained model to be used"
     )
     parser.add_argument(
         "--output_path", type=str, default="./output.mp4", help="The path where the generated video will be saved"
     )
     parser.add_argument(
-        "--num_inference_steps", type=int, default=50, help="Number of steps for the inference process"
+        "--num_inference_steps", type=int, default=30, help="Number of steps for the inference process"
     )
-    parser.add_argument("--guidance_scale", type=float, default=6.0, help="The scale for classifier-free guidance")
+    parser.add_argument("--guidance_scale", type=float, default=2.0, help="The scale for classifier-free guidance")
     parser.add_argument("--num_videos_per_prompt", type=int, default=1, help="Number of videos to generate per prompt")
     parser.add_argument(
         "--device", type=str, default="cuda", help="The device to use for computation (e.g., 'cuda' or 'cpu')"
@@ -121,6 +156,7 @@ if __name__ == "__main__":
     generate_video(
         prompt=args.prompt,
         model_path=args.model_path,
+        image_path=args.image_path,
         output_path=args.output_path,
         num_inference_steps=args.num_inference_steps,
         guidance_scale=args.guidance_scale,
