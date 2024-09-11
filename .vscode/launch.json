@@ -1,0 +1,88 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "lora convert",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/mnt/ceph/develop/jiawei/CogVideo/tools/export_sat_lora_weight.py",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}", 
+            "env": {},
+            "args": [
+            ]
+        },
+        {
+            "name": "lora INFR",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/mnt/ceph/develop/jiawei/CogVideo/sat/sample_video.py",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}", 
+            "env": {},
+            "justMyCode": false,
+            "args": [
+                "--base",
+                "/mnt/ceph/develop/jiawei/CogVideo/sat/configs/cogvideox_2b_lora_inference.yaml",
+                "/mnt/ceph/develop/jiawei/CogVideo/sat/configs/inference.yaml",
+                "--seed",
+                "42"
+            ]
+        },
+        {
+            "name": "convert_weight_sat2hf_2b",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/mnt/ceph/develop/jiawei/CogVideo/tools/convert_weight_sat2hf.py",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}",
+            "justMyCode": false,
+            "env": {},
+            "args": [
+                "--transformer_ckpt_path",
+                "/mnt/ceph/develop/jiawei/model_checkpoint/CogVideoX-2b-sat/transformer/1000/mp_rank_00_model_states.pt",
+                "--vae_ckpt_path",
+                "/mnt/ceph/develop/jiawei/model_checkpoint/CogVideoX-2b-sat/vae/3d-vae.pt",
+                "--output_path", 
+                "/mnt/ceph/develop/jiawei/model_checkpoint/CogVideoX-2b-base", 
+                "--fp16",
+                "--text_encoder_cache_dir",
+                "/mnt/ceph/develop/jiawei/model_checkpoint/CogVideoX-2b-base",  
+                "--num_layers", 
+                "30", 
+                "--num_attention_heads",
+                "30",
+                "--scaling_factor", 
+                "1.15258426",
+                "--snr_shift_scale",
+                "3.0"
+            ]
+        },
+        {
+            "name": "Python: Trans",
+            "type": "debugpy",
+            "request": "launch", 
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}",
+            "justMyCode": false,
+            "env": {
+                "LOCAL_RANK": "0"
+            },
+            "subProcess": true,
+            // we launch a module...
+            "module":"torch.distributed.launch",
+            // with args...
+            "args":[
+                "--use_env","--standalone","--nproc_per_node=1",
+                "/mnt/ceph/develop/jiawei/CogVideo/sat/train_video.py",
+            
+                "--base",
+                "/mnt/ceph/develop/jiawei/CogVideo/sat/configs/cogvideox_2b_lora.yaml",
+                "/mnt/ceph/develop/jiawei/CogVideo/sat/configs/sft.yaml",
+                "--seed",
+                "42"
+            ]
+        }
+    ]
+}

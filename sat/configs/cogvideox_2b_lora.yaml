@@ -50,7 +50,7 @@ model:
         pos_embed_config:
           target: dit_video_concat.Basic3DPositionEmbeddingMixin
           params:
-            text_length: 226
+            text_length: 2048
             height_interpolation: 1.875
             width_interpolation: 1.875
 
@@ -81,14 +81,14 @@ model:
           ucg_rate: 0.1
           target: sgm.modules.encoders.modules.FrozenT5Embedder
           params:
-            model_dir: "t5-v1_1-xxl"
-            max_length: 226
+            model_dir: "/mnt/ceph/develop/jiawei/model_checkpoint/t5-v1_1-xxl"
+            max_length: 2048
 
   first_stage_config:
     target: vae_modules.autoencoder.VideoAutoencoderInferenceWrapper
     params:
       cp_size: 1
-      ckpt_path: "cogvideox-2b-sat/vae/3d-vae.pt"
+      ckpt_path: "/mnt/ceph/develop/jiawei/model_checkpoint/CogVideoX-2b-sat/vae/3d-vae.pt"
       ignore_keys: [ 'loss' ]
 
       loss_config:
