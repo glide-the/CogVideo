@@ -10,3 +10,4 @@ output*
 test*
 model_real_esran/RealESRGAN_x4.pth
 model_rife/flownet.pkl
+.vscode/launch.json
