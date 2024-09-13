@@ -8,3 +8,6 @@ logs/
 .idea
 output*
 test*
+.vscode/launch.json
+model_real_esran/RealESRGAN_x4.pth
+model_rife/flownet.pkl
