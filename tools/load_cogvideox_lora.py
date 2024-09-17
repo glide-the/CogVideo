@@ -58,6 +58,11 @@ def get_args():
         """,
     )
     parser.add_argument(
+        "--prompt",
+        type=str,
+        help="The prompt to use for the generation.",
+    )
+    parser.add_argument(
         "--output_dir",
         type=str,
         default="output",
@@ -70,23 +75,23 @@ if __name__ == "__main__":
     args = get_args()
     pipe = CogVideoXPipeline.from_pretrained(args.pretrained_model_name_or_path, torch_dtype=torch.bfloat16).to(device)
     pipe.load_lora_weights(args.lora_weights_path,  weight_name="pytorch_lora_weights.safetensors", adapter_name="test_1")
-    pipe.fuse_lora(lora_scale=1/128)
+    pipe.fuse_lora(lora_scale=1/args.lora_r)
 
 
     pipe.scheduler = CogVideoXDPMScheduler.from_config(pipe.scheduler.config, timestep_spacing="trailing")
 
     os.makedirs(args.output_dir, exist_ok=True)
-    prompt="""In the heart of a bustling city, a young woman with long, flowing brown hair and a radiant smile stands out. She's donned in a cozy white beanie adorned with playful animal ears, adding a touch of whimsy to her appearance. Her eyes sparkle with joy as she looks directly into the camera, her expression inviting and warm. The background is a blur of activity, with indistinct figures moving about, suggesting a lively public space. The lighting is soft and diffused, casting a gentle glow on her face and highlighting her features. The overall mood is cheerful and vibrant, capturing a moment of happiness in the midst of urban life.
-    """
+    seed = random.randint(0, 2**8 - 1)
+    print(seed)
     latents = pipe(
-        prompt=prompt,
+        prompt=args.prompt,
         num_videos_per_prompt=1,
         num_inference_steps=50,
         num_frames=49,
         use_dynamic_cfg=True,
         output_type="pt",
         guidance_scale=3.0,
-        generator=torch.Generator(device="cpu").manual_seed(42),
+        generator=torch.Generator(device="cpu").manual_seed(seed),
     ).frames
     batch_size = latents.shape[0]
     batch_video_frames = []
