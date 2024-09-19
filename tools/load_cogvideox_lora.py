@@ -91,7 +91,7 @@ if __name__ == "__main__":
         use_dynamic_cfg=True,
         output_type="pt",
         guidance_scale=3.0,
-        generator=torch.Generator(device="cpu").manual_seed(seed),
+        generator=torch.Generator(device="cpu").manual_seed(42),
     ).frames
     batch_size = latents.shape[0]
     batch_video_frames = []
