@@ -1,7 +1,7 @@
 args:
   latent_channels: 16
   mode: inference
-  load: "/mnt/ceph/develop/jiawei/model_checkpoint/ckpts_2b_lora_tom_and_jerry_03/lora-disney-09-17-23-24" # This is for Full model without lora adapter
+  load: "/mnt/ceph/develop/jiawei/model_checkpoint/ckpts_2b_lora_blibli_6/lora-disney-09-21-21-51" # This is for Full model without lora adapter
   # load: "{your lora folder} such as zRzRzRzRzRzRzR/lora-disney-08-20-13-28" # This is for Full model without lora adapter
 
   batch_size: 1

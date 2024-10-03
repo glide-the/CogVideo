@@ -75,7 +75,7 @@ if __name__ == "__main__":
     args = get_args()
     pipe = CogVideoXPipeline.from_pretrained(args.pretrained_model_name_or_path, torch_dtype=torch.bfloat16).to(device)
     pipe.load_lora_weights(args.lora_weights_path,  weight_name="pytorch_lora_weights.safetensors", adapter_name="test_1")
-    pipe.fuse_lora(lora_scale=1/args.lora_r)
+    pipe.fuse_lora(lora_scale=1/args.lora_r, components=["transformer"])
 
 
     pipe.scheduler = CogVideoXDPMScheduler.from_config(pipe.scheduler.config, timestep_spacing="trailing")
